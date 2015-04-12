@@ -103,7 +103,7 @@ idxtest=[setnums[50:75],setnums[500:750]]
 idxval=[setnums[75:101],setnums[750:1001]]
 alphateststart=numpy.linspace(-5,2,alphagridsize)
 rhoteststart=numpy.linspace(0.1,.9,rhogridsize)
-datasets=range(4,5)
+datasets=range(0,5)
 
 resultkeeper=numpy.array(['dataset','datasetsize','method','MSE','alpha','rho'])
 for dataset in datasets:
