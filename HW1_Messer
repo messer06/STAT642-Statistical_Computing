@@ -1,0 +1,335 @@
+from sklearn import linear_model
+from numpy import zeros, loadtxt
+import sklearn
+import datetime as dt
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import sys
+import random
+import numpy
+import scipy
+import math
+import os
+import operator
+
+def PltCorrMatrix(corr,dataset=-1):
+    corrfig=plt.figure()
+    plt.imshow(corr, cmap='hot', interpolation='none',vmin=0,vmax=1)
+    plt.colorbar()
+    plt.savefig(os.path.join(os.getcwd(),'Corr%d.pdf' %dataset))
+    plt.close()
+ 
+def PltHistograms(datamatrix,dataset=-1,title="Histogram"):
+    numrows = int(math.ceil(scipy.sqrt(len(datamatrix[1,:]))))
+    
+    mng=plt.get_current_fig_manager()
+    mng.full_screen_toggle()
+    histfig=plt.figure()
+    for row in range(numrows):
+        for col in range(numrows):
+            subplotnum=row*(numrows)+col
+            if subplotnum <= len(datamatrix[1,:]):
+                plt.subplot(numrows,numrows,subplotnum)           
+                plt.hist(datamatrix[:,subplotnum],10)
+                plt.xticks(fontsize='4')
+                plt.yticks(fontsize='4')
+    plt.tight_layout(pad=0.5)
+    plt.savefig(os.path.join(os.getcwd(),'Histogram%d.pdf' %dataset))
+    plt.close()
+    
+def PltXYScatters(xmatrix,yvector,dataset=-1):
+    numrows = int(math.ceil(scipy.sqrt(len(xmatrix[1,:]))))
+#    mng=plt.get_current_fig_manager()
+#    mng.full_screen_toggle()
+    xyscatterfig=plt.figure()
+    
+    for row in range(numrows):
+        for col in range(numrows):
+            subplotnum=row*(numrows)+col
+            if subplotnum <= len(xmatrix[1,:]):
+                plt.subplot(numrows,numrows,subplotnum)           
+                plt.plot(xmatrix[:,subplotnum],yvector)
+                plt.xticks(fontsize='4')
+                plt.yticks(fontsize='4')
+    plt.tight_layout(pad=0.5)
+    plt.savefig(os.path.join(os.getcwd(),'XYScatter%d.pdf' %dataset))
+    plt.close()
+ 
+def PltResidHist(residuals,title,dataset,datasetsize,regtype):
+    histfig=plt.figure()        
+    plt.hist(residuals,10)
+    plt.title(title + 'Residuals',fontsize=20)
+    plt.savefig(os.path.join(os.getcwd(),regtype+ title + 'ResidHist'+datasetsize+'%d.pdf' %dataset))
+    plt.close()
+ 
+
+X = zeros((5,1000,100))
+Y = zeros((1000,5))
+   
+# Load the data files into the array
+   
+X[0,:,:] = loadtxt("DataX0.txt")
+Y[:,0] = loadtxt("DataY0.txt")
+
+X[1,:,:] = loadtxt("DataX1.txt")
+Y[:,1] = loadtxt("DataY1.txt")
+   
+X[2,:,:] = loadtxt("DataX2.txt")
+Y[:,2] = loadtxt("DataY2.txt")
+   
+X[3,:,:] = loadtxt("DataX3.txt",)
+Y[:,3] = loadtxt("DataY3.txt")
+   
+X[4,:,:] = loadtxt("DataX4.txt")
+Y[:,4] = loadtxt("DataY4.txt")
+
+#set search epsilon 
+alphaeps=numpy.exp(-3)
+rhoeps=numpy.exp(-1)
+
+#set grid side for search
+alphagridsize=4
+rhogridsize=4
+
+#shuffle the data
+random.seed(9)
+setnums=range(1000)
+random.shuffle(setnums)
+
+#set control variables
+datasetsizes=['small', 'large']
+idxtrain=[setnums[:50],setnums[:500]]
+idxtest=[setnums[50:75],setnums[500:750]]
+idxval=[setnums[75:101],setnums[750:1001]]
+alphateststart=numpy.linspace(-5,2,alphagridsize)
+rhoteststart=numpy.linspace(0.1,.9,rhogridsize)
+datasets=range(4,5)
+
+resultkeeper=numpy.array(['dataset','datasetsize','method','MSE','alpha','rho'])
+for dataset in datasets:
+    
+    #grab the data
+    indvars=X[dataset,:,:]
+    depvars=Y[:,dataset]
+    
+    #dataset plots
+    plt.figure()
+    plt.boxplot(depvars)
+    plt.savefig(os.path.join(os.getcwd(),'ResponseBox%d.pdf' %dataset))
+    plt.close()
+    corr=numpy.corrcoef(indvars.T)
+    PltCorrMatrix(corr,dataset)
+    PltHistograms(indvars,dataset)
+    PltXYScatters(indvars,depvars,dataset)
+
+    #run for large and small sets
+    for idxdatasetsize in range(len(datasetsizes)):
+#    for idxdatasetsize in [0]:
+        print "Fitting OLS with " + datasetsizes[idxdatasetsize] + " part of dataset %d" %dataset
+        clf_O = linear_model.LinearRegression()
+        clf_O.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_O_trainresiduals=(clf_O.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_O_trainMSE=numpy.mean(clf_O_trainresiduals**2)
+        clf_O_testresiduals=(clf_O.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+        clf_O_testMSE=numpy.mean(clf_O_testresiduals**2)
+        clf_O_valresiduals=(clf_O.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])
+        clf_O_valMSE=numpy.mean(clf_O_valresiduals**2)
+        print clf_O_valMSE
+        PltResidHist(clf_O_trainresiduals,"Train",dataset,datasetsizes[idxdatasetsize],"OLS")
+        PltResidHist(clf_O_testresiduals,"Test",dataset,datasetsizes[idxdatasetsize],"OLS")
+        PltResidHist(clf_O_valresiduals,"Validation",dataset,datasetsizes[idxdatasetsize],"OLS")
+        resultkeeper=numpy.vstack((resultkeeper,[dataset,datasetsizes[idxdatasetsize],'OLS',clf_O_valMSE,0,0]))
+        
+        #ridge regression intialization
+        print "Fitting RR with " + datasetsizes[idxdatasetsize] + " part of dataset %d" %dataset 
+        clf_R = linear_model.Ridge(alpha=0.1)
+        clf_R.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_R_trainresiduals=(clf_R.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_R_testresiduals=(clf_R.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+        clf_R_valresiduals=(clf_R.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])
+        clf_R_MSE=(([numpy.mean(clf_R_trainresiduals**2),numpy.mean(clf_R_testresiduals**2),numpy.mean(clf_R_valresiduals**2),numpy.log(0.1),0.1]))
+        
+        #search for alpha down to alpha epsilon
+        alphatests=numpy.copy(alphateststart)
+        alphastep=alphatests[1]-alphatests[0]
+        while alphastep >= alphaeps:
+            for alphatest in alphatests:
+                clf_R = linear_model.Ridge(alpha=numpy.exp(alphatest))
+                clf_R.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+                clf_R_trainresiduals=(clf_R.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])      
+                clf_R_testresiduals=(clf_R.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+                clf_R_valresiduals=(clf_R.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])
+                clf_R_MSE=numpy.vstack((clf_R_MSE,[numpy.mean(clf_R_trainresiduals**2),numpy.mean(clf_R_testresiduals**2),numpy.mean(clf_R_valresiduals**2),alphatest,numpy.exp(alphatest)]))
+            MSE_minidx,MSE_min = min(enumerate(clf_R_MSE[:,1]),key=operator.itemgetter(1))
+            alphatests=numpy.linspace(clf_R_MSE[MSE_minidx,-2]-alphastep,clf_R_MSE[MSE_minidx,-2]+alphastep,5)
+            alphastep=alphatests[1]-alphatests[0]
+        
+        #MSE for alphas
+        clf_R_MSE_sorted=clf_R_MSE[clf_R_MSE[:,-1].argsort(),:]
+        plt.figure()
+        plt.plot(clf_R_MSE_sorted[:,-1],clf_R_MSE_sorted[:,0],label='Train MSE')
+        plt.plot(clf_R_MSE_sorted[:,-1],clf_R_MSE_sorted[:,1],label='Test MSE')
+        plt.plot(clf_R_MSE_sorted[:,-1],clf_R_MSE_sorted[:,2],label='Validation MSE')
+        plt.legend(bbox_to_anchor=[0.,1.02,1.,.102],loc=3,ncol=3,mode="expand",borderaxespad=0.)
+        plt.savefig(os.path.join(os.getcwd(),'RRMSE'+datasetsizes[idxdatasetsize]+'%d.pdf' %dataset))
+        plt.close()
+        
+        #optimal model
+        print 'Optimal alpha: %f' %clf_R_MSE[MSE_minidx,-1] +' for a Val MSE of %f' %clf_R_MSE[MSE_minidx,2]
+        clf_R = linear_model.Ridge(alpha=clf_R_MSE[MSE_minidx,-1])
+        clf_R.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_R_trainresiduals=(clf_R.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])      
+        clf_R_testresiduals=(clf_R.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+        clf_R_valresiduals=(clf_R.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])            
+        PltResidHist(clf_R_trainresiduals,"Train",dataset,datasetsizes[idxdatasetsize],"RR")
+        PltResidHist(clf_R_testresiduals,"Test",dataset,datasetsizes[idxdatasetsize],"RR")
+        PltResidHist(clf_R_valresiduals,"Validation",dataset,datasetsizes[idxdatasetsize],"RR")
+        resultkeeper=numpy.vstack((resultkeeper,[dataset,datasetsizes[idxdatasetsize],'RR',MSE_min,clf_R_MSE[MSE_minidx,-1],0]))
+        
+        #inialize lasso
+        print "Fitting Lasso with " + datasetsizes[idxdatasetsize] + " part of dataset %d" %dataset 
+        clf_L = linear_model.Lasso(alpha=numpy.exp(alphateststart[0]))
+        clf_L.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_L_trainresiduals=(clf_L.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])  
+        clf_L_testresiduals=(clf_L.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+        clf_L_valresiduals=(clf_L.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])
+        clf_L_MSE=(([numpy.mean(clf_L_trainresiduals**2),numpy.mean(clf_L_testresiduals**2),numpy.mean(clf_L_valresiduals**2),0,numpy.exp(alphateststart[0])]))
+        
+        #search for alpha down to alpha epsilon                          
+        alphatests=numpy.copy(alphateststart)
+        alphastep=alphatests[1]-alphatests[0]
+        while alphastep >= alphaeps:            
+            for alphatest in alphatests:
+                clf_L = linear_model.Lasso(alpha=numpy.exp(alphatest))
+                clf_L.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+                clf_L_trainresiduals=(clf_L.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])   
+                clf_L_testresiduals=(clf_L.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+                clf_L_valresiduals=(clf_L.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])
+                clf_L_MSE=numpy.vstack((clf_L_MSE,[numpy.mean(clf_L_trainresiduals**2),numpy.mean(clf_L_testresiduals**2),numpy.mean(clf_L_valresiduals**2),alphatest,numpy.exp(alphatest)]))
+            MSE_minidx,MSE_min = min(enumerate(clf_L_MSE[:,1]),key=operator.itemgetter(1))
+            alphatests=numpy.linspace(clf_L_MSE[MSE_minidx,-2]-alphastep,clf_L_MSE[MSE_minidx,-2]+alphastep,5)
+            alphastep=alphatests[1]-alphatests[0]
+        
+        #MSE plots
+        plt.figure()
+        clf_L_MSE_sorted=clf_L_MSE[clf_L_MSE[:,-1].argsort()]
+        plt.plot(clf_L_MSE_sorted[:,-1],clf_L_MSE_sorted[:,0],label='Train MSE')
+        plt.plot(clf_L_MSE_sorted[:,-1],clf_L_MSE_sorted[:,1],label='Test MSE')
+        plt.plot(clf_L_MSE_sorted[:,-1],clf_L_MSE_sorted[:,2],label='Validation MSE')
+        plt.legend(bbox_to_anchor=[0.,1.02,1.,.102],loc=3,ncol=3,mode="expand",borderaxespad=0.)
+        plt.savefig(os.path.join(os.getcwd(),'LassoMSE'+datasetsizes[idxdatasetsize]+'%d.pdf' %dataset))
+        plt.close()
+        
+        #model from optimal epsilon
+        print 'Optimal alpha: %f' %clf_L_MSE[MSE_minidx,-1] +' for a Val MSE of %f' %clf_L_MSE[MSE_minidx,2]
+        clf_L = linear_model.Lasso(alpha=(clf_L_MSE[MSE_minidx,-1]))
+        clf_L.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_L_trainresiduals=(clf_L.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])      
+        clf_L_testresiduals=(clf_L.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+        clf_L_valresiduals=(clf_L.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])            
+        PltResidHist(clf_L_trainresiduals,"Train",dataset,datasetsizes[idxdatasetsize],"Lasso")
+        PltResidHist(clf_L_testresiduals,"Test",dataset,datasetsizes[idxdatasetsize],"Lasso")
+        PltResidHist(clf_L_valresiduals,"Validation",dataset,datasetsizes[idxdatasetsize],"Lasso")            
+        resultkeeper=numpy.vstack((resultkeeper,[dataset,datasetsizes[idxdatasetsize],'Lasso',MSE_min,clf_L_MSE[MSE_minidx,-1],0]))
+        
+        #inialize elastic net
+        print "Fitting Elastic Net with " + datasetsizes[idxdatasetsize] + " part of dataset %d" %dataset 
+        clf_E = linear_model.ElasticNet(alpha=numpy.exp(alphateststart[0]),rho=0.1)
+        clf_E.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_E_trainresiduals=(clf_E.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_E_testresiduals=(clf_E.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+        clf_E_valresiduals=(clf_E.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])
+        clf_E_MSE=(([numpy.mean(clf_E_trainresiduals**2),numpy.mean(clf_E_testresiduals**2),numpy.mean(clf_E_valresiduals**2),alphateststart[0],numpy.exp(alphateststart[0]),0.1]))
+        
+        #search down to alpha and rho epsilons
+        alphatests=numpy.copy(alphateststart)
+        rhotests=numpy.copy(rhoteststart)
+        alphastep=alphatests[1]-alphatests[0]
+        rhostep=rhotests[1]-rhotests[0]
+        while alphastep >= alphaeps or rhostep>=rhoeps:        
+            for alphatest in alphatests:
+                for rhotest in rhotests:
+                    clf_E = linear_model.ElasticNet(alpha=numpy.exp(alphatest),rho=rhotest,max_iter=5000)
+                    clf_E.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+                    clf_E_trainresiduals=(clf_E.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])
+                    clf_E_testresiduals=(clf_E.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+                    clf_E_valresiduals=(clf_E.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])
+                    clf_E_MSE=numpy.vstack((clf_E_MSE,[numpy.mean(clf_E_trainresiduals**2),numpy.mean(clf_E_testresiduals**2),numpy.mean(clf_E_valresiduals**2),alphatest,numpy.exp(alphatest),rhotest]))
+            MSE_minidx,MSE_min = min(enumerate(clf_E_MSE[:,1]),key=operator.itemgetter(1))
+            alphatests=numpy.linspace(clf_E_MSE[MSE_minidx,-3]-alphastep,clf_E_MSE[MSE_minidx,-3]+alphastep,5)
+            rhotests=numpy.linspace(max(0.1,clf_E_MSE[MSE_minidx,-1]-rhostep),min(1,clf_E_MSE[MSE_minidx,-1]+rhostep),5)
+            rhotests=numpy.hstack((rhotests,[.25,.5,.75]))
+            if alphastep>= alphaeps: alphastep=alphatests[1]-alphatests[0]      
+            if rhostep>=rhoeps: rhostep=rhotests[1]-rhotests[0]
+
+        #MSE plots for rho in .25,.5,.75
+#        print (clf_E_MSE[MSE_minidx,-2]),(clf_E_MSE[MSE_minidx,-1])
+        for rho in [.25,.5,.75]:
+            plt.figure()
+            clf_E_MSE_sorted=clf_E_MSE[(clf_E_MSE[:,-2].argsort()),:]
+            clf_E_MSE_filtered=clf_E_MSE_sorted[([i for i in range(len(clf_E_MSE_sorted[:,-1])) if clf_E_MSE_sorted[i,-1]==rho]),:]
+            plt.plot(clf_E_MSE_filtered[:,-2],clf_E_MSE_filtered[:,0],label='Train MSE')
+            plt.plot(clf_E_MSE_filtered[:,-2],clf_E_MSE_filtered[:,1],label='Test MSE')
+            plt.plot(clf_E_MSE_filtered[:,-2],clf_E_MSE_filtered[:,2],label='Validation MSE')
+            plt.axis([min(clf_E_MSE_filtered[:,-2]),max(clf_E_MSE_filtered[:,-2]),0,min(max(max(clf_E_MSE_filtered[:,0]),max(clf_E_MSE_filtered[:,1]),max(clf_E_MSE_filtered[:,2])),600)])
+            plt.legend(bbox_to_anchor=[0.,1.02,1.,.102],loc=3,ncol=3,mode="expand",borderaxespad=0.)
+            plt.savefig(os.path.join(os.getcwd(),'ElasticMSE%d' %(rho*10) +datasetsizes[idxdatasetsize]+'%d.pdf' %dataset))
+            plt.close()
+        
+        #MSE at optimal rho
+        rhotest=(clf_E_MSE[MSE_minidx,-1])
+        for alphatest in numpy.linspace(-5,2,alphastep):
+            clf_E = linear_model.ElasticNet(alpha=numpy.exp(alphatest),rho=rhotest,max_iter=5000)
+            clf_E.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])
+            clf_E_trainresiduals=(clf_E.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])
+            clf_E_testresiduals=(clf_E.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+            clf_E_valresiduals=(clf_E.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])
+            clf_E_MSE=numpy.vstack((clf_E_MSE,[numpy.mean(clf_E_trainresiduals**2),numpy.mean(clf_E_testresiduals**2),numpy.mean(clf_E_valresiduals**2),alphatest,numpy.exp(alphatest),rhotest]))
+        clf_E_MSE_sorted=clf_E_MSE[(clf_E_MSE[:,-2].argsort()),:]
+        clf_E_MSE_filtered=clf_E_MSE_sorted[([i for i in range(len(clf_E_MSE_sorted[:,-1])) if clf_E_MSE_sorted[i,-1]==(clf_E_MSE[MSE_minidx,-1])]),:]
+        plt.plot(clf_E_MSE_filtered[:,-2],clf_E_MSE_filtered[:,0],label='Train MSE')
+        plt.plot(clf_E_MSE_filtered[:,-2],clf_E_MSE_filtered[:,1],label='Test MSE')
+        plt.plot(clf_E_MSE_filtered[:,-2],clf_E_MSE_filtered[:,2],label='Validation MSE')              
+        plt.legend(bbox_to_anchor=[0.,1.02,1.,.102],loc=3,ncol=3,mode="expand",borderaxespad=0.)
+        plt.savefig(os.path.join(os.getcwd(),'ElasticMSEopt'+datasetsizes[idxdatasetsize]+'%d.pdf' %dataset))
+        plt.close()          
+        
+        #optimal model
+        MSE_minidx,MSE_min = min(enumerate(clf_E_MSE[:,1]),key=operator.itemgetter(1))
+        print 'Optimal alpha: %f rho: %f' %(clf_E_MSE[MSE_minidx,-2],rhotest) +' for a Val MSE of %f' %clf_E_MSE[MSE_minidx,2]        
+        clf_E = linear_model.ElasticNet(alpha=(clf_E_MSE[MSE_minidx,-2]),rho=(clf_E_MSE[MSE_minidx,-1]))
+        clf_E.fit([indvars[i] for i in idxtrain[idxdatasetsize]],[depvars[i] for i in idxtrain[idxdatasetsize]])        
+        clf_E_valresiduals=(clf_E.predict([indvars[i] for i in idxval[idxdatasetsize]])-[depvars[i] for i in idxval[idxdatasetsize]])        
+        clf_E_trainresiduals=(clf_E.predict([indvars[i] for i in idxtrain[idxdatasetsize]])-[depvars[i] for i in idxtrain[idxdatasetsize]])
+        clf_E_testresiduals=(clf_E.predict([indvars[i] for i in idxtest[idxdatasetsize]])-[depvars[i] for i in idxtest[idxdatasetsize]])
+        PltResidHist(clf_E_trainresiduals,"Train",dataset,datasetsizes[idxdatasetsize],"Elastic")
+        PltResidHist(clf_E_testresiduals,"Test",dataset,datasetsizes[idxdatasetsize],"Elastic")
+        PltResidHist(clf_E_valresiduals,"Validation",dataset,datasetsizes[idxdatasetsize],"Elastic") 
+        resultkeeper=numpy.vstack((resultkeeper,[dataset,datasetsizes[idxdatasetsize],'Elastic',MSE_min,clf_E_MSE[MSE_minidx,-2],clf_E_MSE[MSE_minidx,-1]]))       
+       
+        # Validations
+    
+#        resultmatrix=numpy.reshape(clf_E_MSE[0:,1],(len(alphatests),len(rhotests)))
+#        grid_rho,grid_alpha = numpy.mgrid[min(clf_E_MSE[:,-1]):max(clf_E_MSE[:,-1]):1000j,min(clf_E_MSE[:,-2]):max(clf_E_MSE[:,-2]):1000j]
+#        resultmatrixtrain=scipy.interpolate.griddata(clf_E_MSE[:,-2:],clf_E_MSE[:,0],(grid_alpha,grid_rho),method='cubic',fill_value=500)
+#        numpy.putmask(resultmatrixtrain,resultmatrixtrain>=1000,1000)
+#        plt.figure()
+#        plt.contourf(grid_alpha,grid_rho,resultmatrixtrain,100,label='Train MSE')
+#        plt.colorbar()
+#        plt.savefig(os.path.join(os.getcwd(),'ElasticMSEtrain'+datasetsizes[idxdatasetsize]+'%d.pdf' %dataset))
+#        plt.close()        
+#        resultmatrixtest=scipy.interpolate.griddata(clf_E_MSE[:,-2:],clf_E_MSE[:,1],(grid_alpha,grid_rho),method='nearest',fill_value=1000)
+#        numpy.putmask(resultmatrixtest,resultmatrixtest>=1000,1000)
+#        plt.figure()
+#        plt.contourf(grid_alpha,grid_rho,resultmatrixtest,100,label='Test MSE')
+#        plt.colorbar()
+#        plt.savefig(os.path.join(os.getcwd(),'ElasticMSEtest'+datasetsizes[idxdatasetsize]+'%d.pdf' %dataset))
+#        plt.close()
+#        resultmatrixval=scipy.interpolate.griddata(clf_E_MSE[:,-2:],clf_E_MSE[:,2],(grid_alpha,grid_rho),method='nearest',fill_value=1000)
+#        numpy.putmask(resultmatrixval,resultmatrixval>=1000,1000)
+#        plt.figure()
+#        plt.contourf(grid_alpha,grid_rho,resultmatrixtest,100,label='Validation MSE')
+#        plt.colorbar()
+#        plt.savefig(os.path.join(os.getcwd(),'ElasticMSEval'+datasetsizes[idxdatasetsize]+'%d.pdf' %dataset))
+#        plt.close()
+    
