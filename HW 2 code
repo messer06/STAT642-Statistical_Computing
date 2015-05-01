@@ -1,0 +1,289 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap 
+from sklearn.cross_validation import train_test_split 
+from sklearn.preprocessing import StandardScaler 
+from sklearn.datasets import make_moons, make_circles, make_classification 
+from sklearn.neighbors import KNeighborsClassifier 
+from sklearn.svm import SVC 
+from sklearn.tree import DecisionTreeClassifier 
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier 
+from sklearn.naive_bayes import GaussianNB 
+from sklearn.lda import LDA 
+from sklearn.qda import QDA
+from sklearn.neural_network import rbm
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix
+from operator import itemgetter
+from numpy import vstack
+from itertools import combinations
+from time import time
+h = .02 # step size in the mesh
+
+#names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Decision Tree", "Random Forest", "AdaBoost", "Naive Bayes", "LDA", "QDA"] classifiers = [ KNeighborsClassifier(3), SVC(kernel="linear", C=0.025), SVC(gamma=2, C=1), DecisionTreeClassifier(max_depth=5),
+#RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1), AdaBoostClassifier(), GaussianNB(), LDA(), QDA()]
+
+names = ["Linear SVM","RBF SVM","Decision Tree", "QDA","AdaBoost"] #, , , , "Random Forest",  "Naive Bayes", "LDA"] #"AdaBoost",
+classifiers = [SVC(kernel="linear", C=0.025),SVC(gamma=2, C=1),DecisionTreeClassifier(max_depth=5),QDA(),AdaBoostClassifier()]#, , , , RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),  GaussianNB(), LDA(), QDA()] #AdaBoostClassifier(),
+param_names = [("C"),("gamma","C"),("max_depth"),("reg_param"),("n_estimators")]
+LinSVMTestLevels=np.linspace(0.25,10,30)
+DecisionTreeTestLevels=range(1,8)
+QDATestLevels=np.linspace(-5,5,100)
+AdaBoostTestLevels=range(1,50,4)
+RBFTestLevelsC=np.linspace(0.25,2,10)
+RBFTestLevelsgamma=np.linspace(0,.2,10)
+a,b=np.meshgrid(RBFTestLevelsC,RBFTestLevelsgamma)
+RBFTestLevelsgamma=np.linspace(0,3,.2)
+RBFTestLevels=np.vstack([a.ravel(),b.ravel()])
+X, y = make_classification(n_features=2, n_redundant=0, n_informative=2, random_state=1, n_clusters_per_class=1) 
+rng = np.random.RandomState(2) 
+X += 2 * rng.uniform(size=X.shape) 
+linearly_separable = (X, y)
+
+try:
+    ds
+except NameError:
+    headers=[]
+    ds=[]
+    with open('thyroid.dat','r') as file:
+        for line in file:
+            if line[:2]=='@r':
+                datafileid=line.split(" ")
+            elif line[:2]=='@a':
+                attribute=line.split(" ")
+                headers.append(attribute)
+            elif line[:1]=="0":
+                if ds==[]: 
+                    ds=np.array(map(float, line.split(", ")))
+                else:
+                    newdata=np.array(map(float, line.split(", ")))
+                    if newdata[21]!=2: ds=np.vstack([ds,newdata])
+#    ds=ds.astype(np.float)
+
+#figure = plt.figure(figsize=(27, 9))
+i = 1
+
+
+
+
+# preprocess dataset, split into training and test part 
+#X = ds[:,:21]
+#y = (ds[:,21]==3)+0
+
+X = ds[:,[0,1,3,5,6,16,17,18,19,20]]
+y = (ds[:,21]==3)+0
+
+X = StandardScaler().fit_transform(X) 
+#X = Scaler().fit_transform(X) 
+X_train, X_testval, y_train, y_testval = train_test_split(X, y, test_size=.5)
+X_test, X_val, y_test, y_val = train_test_split(X_testval, y_testval, test_size=.5)
+
+
+try:
+    del scores
+except:
+    []
+confusion_matrices_train,confusion_matrices_test,confusion_matrices_val=[],[],[]
+predicttrain,predicttest,predictval=[],[],[]
+times=[]
+# iterate over classifiers
+for name, clf in zip(names, classifiers):
+    timestart=time()
+    if name not in ["Decision Tree","QDA","AdaBoost","Linear SVM","RBF SVM"]:
+        clf.fit(X_train, y_train) 
+        confusion_matrices_train.append(confusion_matrix(y_train,clf.predict(X_train)))
+        confusion_matrices_test.append(confusion_matrix(y_test,clf.predict(X_test)))
+        confusion_matrices_val.append(confusion_matrix(y_val,clf.predict(X_val)))
+        score_train = clf.score(X_train, y_train)
+        score_test = clf.score(X_test, y_test)
+        score_val=clf.score(X_val,y_val)
+        try:
+            predicttrain=vstack((predicttrain,np.transpose(np.array(clf.predict(X_train)))))
+            predicttest=vstack((predicttest,np.transpose(np.array(clf.predict(X_test)))))
+            predictval=vstack((predictval,np.transpose(np.array(clf.predict(X_val)))))
+        except:
+            predicttrain=np.transpose(np.array(clf.predict(X_train)))
+            predicttest=np.transpose(np.array(clf.predict(X_test)))
+            predictval=np.transpose(np.array(clf.predict(X_val)))
+        try:
+            scores=vstack([scores,[score_train,score_test,score_val]])
+        except:
+            scores=np.array([score_train,score_test,score_val])
+    elif name =="Linear SVM":
+        score_train=[]
+        score_test=[]        
+        for test_param in LinSVMTestLevels:
+#            print test_param
+            clf=SVC(kernel="linear", C=test_param)
+            clf.fit(X_train, y_train) 
+            score_train.append(clf.score(X_train, y_train))
+            score_test.append(clf.score(X_test, y_test))
+        score_maxidx,score_max = max(enumerate(score_test),key=itemgetter(1))
+        print LinSVMTestLevels[score_maxidx]
+        clf=SVC(kernel="linear", C=LinSVMTestLevels[score_maxidx])
+        clf.fit(X_train, y_train) 
+        score_train=clf.score(X_train, y_train)
+        score_test=clf.score(X_test, y_test)
+        score_val=clf.score(X_val,y_val)
+        try:
+            predicttrain=vstack((predicttrain,np.transpose(np.array(clf.predict(X_train)))))
+            predicttest=vstack((predicttest,np.transpose(np.array(clf.predict(X_test)))))
+            predictval=vstack((predictval,np.transpose(np.array(clf.predict(X_val)))))
+        except:
+            predicttrain=np.transpose(np.array(clf.predict(X_train)))
+            predicttest=np.transpose(np.array(clf.predict(X_test)))
+            predictval=np.transpose(np.array(clf.predict(X_val)))
+        try:
+            scores=vstack([scores,[score_train,score_test,score_val]])
+        except:
+            scores=np.array([score_train,score_test,score_val])
+        confusion_matrices_train.append(confusion_matrix(y_train,clf.predict(X_train)))
+        confusion_matrices_test.append(confusion_matrix(y_test,clf.predict(X_test)))
+        confusion_matrices_val.append(confusion_matrix(y_val,clf.predict(X_val)))
+    elif name =="Decision Tree":
+        score_train=[]
+        score_test=[]        
+        for num_levels in DecisionTreeTestLevels:
+            clf=DecisionTreeClassifier(max_depth=num_levels)
+            clf.fit(X_train, y_train) 
+            score_train.append(clf.score(X_train, y_train))
+            score_test.append(clf.score(X_test, y_test))
+        score_minidx,score_min = min(enumerate(score_test),key=itemgetter(1))
+        clf=DecisionTreeClassifier(max_depth=DecisionTreeTestLevels[score_minidx])
+        print DecisionTreeTestLevels[score_minidx]
+        clf.fit(X_train, y_train) 
+        score_train=clf.score(X_train, y_train)
+        score_test=clf.score(X_test, y_test)
+        score_val=clf.score(X_val,y_val)
+        try:
+            predicttrain=vstack((predicttrain,np.transpose(np.array(clf.predict(X_train)))))
+            predicttest=vstack((predicttest,np.transpose(np.array(clf.predict(X_test)))))
+            predictval=vstack((predictval,np.transpose(np.array(clf.predict(X_val)))))
+        except:
+            predicttrain=np.transpose(np.array(clf.predict(X_train)))
+            predicttest=np.transpose(np.array(clf.predict(X_test)))
+            predictval=np.transpose(np.array(clf.predict(X_val)))
+        try:
+            scores=vstack([scores,[score_train,score_test,score_val]])
+        except:
+            scores=np.array([score_train,score_test,score_val])
+        confusion_matrices_train.append(confusion_matrix(y_train,clf.predict(X_train)))
+        confusion_matrices_test.append(confusion_matrix(y_test,clf.predict(X_test)))
+        confusion_matrices_val.append(confusion_matrix(y_val,clf.predict(X_val)))
+        
+    elif name =="QDA":
+        score_train=[]
+        score_test=[]        
+        for test_param in QDATestLevels: 
+            clf=QDA(reg_param=np.exp(test_param))
+            clf.fit(X_train, y_train) 
+            score_train.append(clf.score(X_train, y_train))
+            score_test.append(clf.score(X_test, y_test))
+        score_maxidx,score_max = max(enumerate(score_test),key=itemgetter(1))
+        clf=QDA(reg_param=np.exp(QDATestLevels[score_maxidx]))
+        print QDATestLevels[score_maxidx]
+        clf.fit(X_train, y_train) 
+        score_train=clf.score(X_train, y_train)
+        score_test=clf.score(X_test, y_test)
+        score_val=clf.score(X_val,y_val)
+        try:
+            predicttrain=vstack((predicttrain,np.transpose(np.array(clf.predict(X_train)))))
+            predicttest=vstack((predicttest,np.transpose(np.array(clf.predict(X_test)))))
+            predictval=vstack((predictval,np.transpose(np.array(clf.predict(X_val)))))
+        except:
+            predicttrain=np.transpose(np.array(clf.predict(X_train)))
+            predicttest=np.transpose(np.array(clf.predict(X_test)))
+            predictval=np.transpose(np.array(clf.predict(X_val)))
+        try:
+            scores=vstack([scores,[score_train,score_test,score_val]])
+        except:
+            scores=np.array([score_train,score_test,score_val])
+        confusion_matrices_train.append(confusion_matrix(y_train,clf.predict(X_train)))
+        confusion_matrices_test.append(confusion_matrix(y_test,clf.predict(X_test)))
+        confusion_matrices_val.append(confusion_matrix(y_val,clf.predict(X_val)))
+        
+    elif name =="RBF SVM":
+        score_train=[]
+        score_test=[]        
+        for test_param in range(RBFTestLevels.shape[1]):
+            clf=SVC(gamma=RBFTestLevels[1,test_param], C=RBFTestLevels[0,test_param])
+            clf.fit(X_train, y_train) 
+            score_train.append(clf.score(X_train, y_train))
+            score_test.append(clf.score(X_test, y_test))
+        score_maxidx,score_max = max(enumerate(score_test),key=itemgetter(1))
+        clf=SVC(gamma=RBFTestLevels[1,score_maxidx], C=RBFTestLevels[0,score_maxidx])
+        print RBFTestLevels[:,score_maxidx]
+        clf.fit(X_train, y_train) 
+        score_train=clf.score(X_train, y_train)
+        score_test=clf.score(X_test, y_test)
+        score_val=clf.score(X_val,y_val)
+        try:
+            predicttrain=vstack((predicttrain,np.transpose(np.array(clf.predict(X_train)))))
+            predicttest=vstack((predicttest,np.transpose(np.array(clf.predict(X_test)))))
+            predictval=vstack((predictval,np.transpose(np.array(clf.predict(X_val)))))
+        except:
+            predicttrain=np.transpose(np.array(clf.predict(X_train)))
+            predicttest=np.transpose(np.array(clf.predict(X_test)))
+            predictval=np.transpose(np.array(clf.predict(X_val)))
+        try:
+            scores=vstack([scores,[score_train,score_test,score_val]])
+        except:
+            scores=np.array([score_train,score_test,score_val])
+        confusion_matrices_train.append(confusion_matrix(y_train,clf.predict(X_train)))
+        confusion_matrices_test.append(confusion_matrix(y_test,clf.predict(X_test)))
+        confusion_matrices_val.append(confusion_matrix(y_val,clf.predict(X_val)))
+    elif name =="AdaBoost":
+        score_train=[]
+        score_test=[]        
+        for test_param in AdaBoostTestLevels:
+            clf=AdaBoostClassifier(n_estimators=test_param)
+            clf.fit(X_train, y_train) 
+            score_train.append(clf.score(X_train, y_train))
+            score_test.append(clf.score(X_test, y_test))
+        score_maxidx,score_max = max(enumerate(score_test),key=itemgetter(1))
+        clf=AdaBoostClassifier(n_estimators=AdaBoostTestLevels[score_maxidx])
+        print AdaBoostTestLevels[score_maxidx]
+        clf.fit(X_train, y_train) 
+        score_train=clf.score(X_train, y_train)
+        score_test=clf.score(X_test, y_test)
+        score_val=clf.score(X_val,y_val)
+        try:
+            predicttrain=vstack((predicttrain,np.transpose(np.array(clf.predict(X_train)))))
+            predicttest=vstack((predicttest,np.transpose(np.array(clf.predict(X_test)))))
+            predictval=vstack((predictval,np.transpose(np.array(clf.predict(X_val)))))
+        except:
+            predicttrain=np.transpose(np.array(clf.predict(X_train)))
+            predicttest=np.transpose(np.array(clf.predict(X_test)))
+            predictval=np.transpose(np.array(clf.predict(X_val)))
+        try:
+            scores=vstack([scores,[score_train,score_test,score_val]])
+        except:
+            scores=np.array([score_train,score_test,score_val])
+        confusion_matrices_train.append(confusion_matrix(y_train,clf.predict(X_train)))
+        confusion_matrices_test.append(confusion_matrix(y_test,clf.predict(X_test)))
+        confusion_matrices_val.append(confusion_matrix(y_val,clf.predict(X_val)))
+    times.append(time()-timestart)
+majorityvotetrain = (np.sum(predicttrain,axis=0)>=3)+0
+majorityvotetest = (np.sum(predicttest,axis=0)>=3)+0
+majorityvoteval = (np.sum(predictval,axis=0)>=3)+0
+confusion_matrices_train.append(confusion_matrix(y_train,majorityvotetrain))
+confusion_matrices_test.append(confusion_matrix(y_test,majorityvotetest))
+confusion_matrices_val.append(confusion_matrix(y_val,majorityvoteval))
+
+agreementvotetrain = (predicttrain[1,:]+(predicttrain[4,:]==predicttrain[1,:])==2)+0
+agreementvotetest = (predicttest[1,:]+(predicttest[4,:]==predicttest[1,:])==2)+0
+agreementvoteval = (predictval[1,:]+(predictval[4,:]==predictval[1,:])==2)+0
+confusion_matrices_train.append(confusion_matrix(y_train,agreementvotetrain))
+confusion_matrices_test.append(confusion_matrix(y_test,agreementvotetest))
+confusion_matrices_val.append(confusion_matrix(y_val,agreementvoteval))
+
+agreementvotetrain = (np.sum(predicttrain[[1,4],:],axis=0)>=2)+0
+agreementvotetest = (np.sum(predicttest[[1,4],:],axis=0)>=2)+0
+agreementvoteval = (np.sum(predictval[[1,4],:],axis=0)>=2)+0
+confusion_matrices_train.append(confusion_matrix(y_train,agreementvotetrain))
+confusion_matrices_test.append(confusion_matrix(y_test,agreementvotetest))
+confusion_matrices_val.append(confusion_matrix(y_val,agreementvoteval))
