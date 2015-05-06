@@ -95,12 +95,11 @@ def PltResidHist(residuals,title,dataset,datasetsize,regtype):
     plt.close()
     
 def RunClassifiers(X_train,X_val,X_test,y_train,y_val,names):
-    masternames = ["Linear SVM","RBF SVM","Decision Tree", "AdaBoost","Stochastic Descent"] #, , , , "Random Forest",  "Naive Bayes", "LDA"] #"AdaBoost",
-    masterclassifiers = [SVC(kernel="linear", C=0.025),SVC(gamma=2, C=1),DecisionTreeClassifier(max_depth=5),AdaBoostClassifier(),SGDClassifier(loss="hinge",penalty="l2")]#, , , , RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),  GaussianNB(), LDA(), QDA()] #AdaBoostClassifier(),    
+    masternames = ["Linear SVM","RBF SVM","Decision Tree", "QDA","AdaBoost","Stochastic Descent"] #, , , , "Random Forest",  "Naive Bayes", "LDA"] #"AdaBoost",
+    masterclassifiers = [SVC(kernel="linear", C=0.025),SVC(gamma=2, C=1),DecisionTreeClassifier(max_depth=5),QDA(),AdaBoostClassifier(),SGDClassifier(loss="hinge",penalty="l2")]#, , , , RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),  GaussianNB(), LDA(), QDA()] #AdaBoostClassifier(),    
     classifiers = []
     for name in names:
         classifiers.append(masterclassifiers[masternames.index(name)])
-    print "ASF"
     LinSVMTestLevels=np.linspace(0.25,10,30)
     DecisionTreeTestLevels=range(1,8)
     QDATestLevels=np.linspace(-5,5,100)
@@ -111,10 +110,6 @@ def RunClassifiers(X_train,X_val,X_test,y_train,y_val,names):
     a,b=np.meshgrid(RBFTestLevelsC,RBFTestLevelsgamma)
     RBFTestLevelsgamma=np.linspace(0,3,.2)
     RBFTestLevels=np.vstack([a.ravel(),b.ravel()])
-    X, y = make_classification(n_features=2, n_redundant=0, n_informative=2, random_state=1, n_clusters_per_class=1) 
-    rng = np.random.RandomState(2) 
-    X += 2 * rng.uniform(size=X.shape) 
-    linearly_separable = (X, y)
     confusion_matrices_train,confusion_matrices_test,confusion_matrices_val=[],[],[]
     predicttrain,predicttest,predictval=[],[],[]
     times=[]
