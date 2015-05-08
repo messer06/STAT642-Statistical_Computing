@@ -5,17 +5,9 @@ from operator import itemgetter
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import os
-from sklearn.cross_validation import train_test_split 
-from sklearn.preprocessing import StandardScaler 
-from sklearn.datasets import make_moons, make_circles, make_classification 
-from sklearn.neighbors import KNeighborsClassifier 
 from sklearn.svm import SVC 
 from sklearn.tree import DecisionTreeClassifier 
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier 
-from sklearn.naive_bayes import GaussianNB 
-from sklearn.lda import LDA 
 from sklearn.qda import QDA
-from sklearn.neural_network import rbm
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix
 from time import time
