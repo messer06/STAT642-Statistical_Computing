@@ -70,4 +70,17 @@ class DataSet:
         self.FAcomp.fit(self.datatrain)
         self.FAcompscores=[self.FAcomp.transform(self.datatrain),self.FAcomp.transform(self.dataval),self.FAcomp.transform(self.datatest)]
         
-#    def LDA(self,)
+    def SparsePCA(self,n_comps=[]):
+        if n_comps==[]: n_comps=self.datatrain.shape[1]
+        self.sparsecomp=decomp.SparsePCA()
+        self.sparsecomp.fit(self.datatrain)
+#        if n_comps==self.numdims:
+#            scree = np.vstack((np.array(range(len(self.princomp.explained_variance_))),self.princomp.explained_variance_))
+#            X2=scree[:,0]
+#            X1=scree[:,-1]
+#            distance = np.dot((X2*np.ones([len(self.princomp.explained_variance_),2]))-scree.transpose(),(X1*np.ones([len(self.princomp.explained_variance_),2])-scree.transpose()).transpose())
+#            distance=distance/np.dot(X2-X1,(X2-X1).transpose())
+#            distance=np.diag(distance)
+#            self.princomp.n_components=min(enumerate(distance),key=itemgetter(1))[0]+1
+        self.sparsecompscores=[self.sparsecomp.transform(self.datatrain),self.sparsecomp.transform(self.dataval),self.sparsecomp.transform(self.datatest)]
+        
