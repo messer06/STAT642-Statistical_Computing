@@ -22,13 +22,13 @@ class DataSet:
         self.test=[]
         self.numdims=numdims
         if data != [[],[],[]]:
-            self.corr = np.corrcoef(np.vstack((self.labelstrain.transpose(),self.datatrain.transpose())).transpose())
+            self.corr = np.corrcoef(np.vstack((self.labelstrain.transpose(),self.datatrain.transpose())))
 
     def add_data(self,setname=[],data=[]):
         if setname=="datatrain":
             self.datatrain=data
             self.labelstrain.transpose()
-            self.corr = np.corrcoef(np.vstack((self.labelstrain.transpose(),self.datatrain.transpose())).transpose())
+#            self.corr = np.corrcoef(np.vstack((self.labelstrain.transpose(),self.datatrain.transpose())))
         elif setname=="dataval": self.dataval=data
         elif setname=="datatest": self.datatest=data
         
@@ -45,19 +45,26 @@ class DataSet:
             distance=np.diag(distance)
             self.princomp.n_components=min(enumerate(distance),key=itemgetter(1))[0]+1
         self.princompscores=[self.princomp.transform(self.datatrain),self.princomp.transform(self.dataval),self.princomp.transform(self.datatest)]
+        self.princompscores[0]=np.nan_to_num(self.princompscores[0])
+        self.princompscores[1]=np.nan_to_num(self.princompscores[1])
+        self.princompscores[2]=np.nan_to_num(self.princompscores[2])
         
     def KernelPCA(self,kernel,n_comps=[],sparseversion=False):
         if sparseversion:
             if n_comps==[]: n_comps=self.numdims
-            self.kernelprincomp=decomp.KernelPCA(kernel)
+            self.kernelprincomp=decomp.KernelPCA(kernel,remove_zero_eig=False)
             self.kernelprincomp.fit(self.datatrain.toarray())
             self.kernelprincompscores=[self.kernelprincomp.transform(self.datatrain.toarray()),self.kernelprincomp.transform(self.dataval.toarray()),self.kernelprincomp.transform(self.datatest.toarray())]
+            
         else:
             if n_comps==[]: n_comps=self.numdims
-            self.kernelprincomp=decomp.KernelPCA(kernel)
+            self.kernelprincomp=decomp.KernelPCA(kernel,remove_zero_eig=False)
             self.kernelprincomp.fit(self.datatrain)
             self.kernelprincompscores=[self.kernelprincomp.transform(self.datatrain),self.kernelprincomp.transform(self.dataval),self.kernelprincomp.transform(self.datatest)]
-       
+        self.kernelprincompscores[0]=np.nan_to_num(self.kernelprincompscores[0])
+        self.kernelprincompscores[1]=np.nan_to_num(self.kernelprincompscores[1])
+        self.kernelprincompscores[2]=np.nan_to_num(self.kernelprincompscores[2])
+    
     def ICA(self,n_comps=[]):
         if n_comps==[]: n_comps=self.datatrain.shape[1]
         self.indcomp=decomp.FastICA()

@@ -15,6 +15,14 @@ from sklearn import feature_selection
 from sklearn.linear_model import SGDClassifier
 from scipy import sparse
 
+def Youdens_func(y,y_pred):
+    confmat=sklearn.metrics.confusion_matrix(y,y_pred).astype(float)
+    return (confmat[0,0]/(confmat[0,0]+confmat[1,0])+confmat[1,1]/(confmat[1,1]+confmat[0,1])-1)
+
+def Youdens_matfunc(confmat):
+    return (confmat[0,0]/(confmat[0,0]+confmat[1,0])+confmat[1,1]/(confmat[1,1]+confmat[0,1])-1)
+
+    
 def ImportSparse(datasetname,settype="train",binvars=False,numcols=[]):
     ds=[]
     with open(datasetname+"/"+datasetname+"/"+datasetname.lower()+"_"+settype+".data",'r') as file:
