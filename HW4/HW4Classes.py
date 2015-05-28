@@ -10,7 +10,7 @@ import os
 import itertools
 import numpy as np
 
-def DataImport(activities=range(1,20),subjects=range(1,9),segments=range(1,61)):
+def DataImport(activities=range(1,20),subjects=range(1,9),segments=range(1,13)):
     data=[]
     labels=[]
     for activity,activitycount in zip(activities,range(len(activities))):
