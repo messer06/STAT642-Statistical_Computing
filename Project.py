@@ -1,7 +1,7 @@
 """
-Beating the Benchmark
 West Nile Virus Prediction @ Kaggle
-__author__ : Abhihsek
+__author__ : Adam Messer
+__date__   : 9 June 2015
 """
 
 #%%
